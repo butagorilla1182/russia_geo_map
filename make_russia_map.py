@@ -47,7 +47,6 @@ parts.append(
 )
 
 parts.append('<div id="map"></div>')
-
 parts.append('<script>')
 
 parts.append(
@@ -66,8 +65,9 @@ parts.append(
 )
 
 parts.append(
-    '''
+'''
 function catOf(r) {
+
     const n = String(r.name || "").toUpperCase();
 
     if (n.includes("LUCH"))
@@ -113,9 +113,94 @@ function catOf(r) {
 }
 
 
+function ageOf(epochIso) {
+
+    const epoch = new Date(epochIso);
+
+    if (Number.isNaN(epoch.getTime())) {
+        return "不明";
+    }
+
+    let diff = Date.now() - epoch.getTime();
+    const future = diff < 0;
+
+    diff = Math.abs(diff);
+
+    const totalMinutes =
+        Math.floor(diff / 60000);
+
+    const days =
+        Math.floor(totalMinutes / 1440);
+
+    const hours =
+        Math.floor((totalMinutes % 1440) / 60);
+
+    const minutes =
+        totalMinutes % 60;
+
+    let text = "";
+
+    if (days > 0) {
+        text += days + "日 ";
+    }
+
+    text += hours + "時間" + minutes + "分";
+
+    return future ? "未来 " + text : text;
+}
+
+
+function freshnessOf(epochIso) {
+
+    const epoch = new Date(epochIso);
+
+    if (Number.isNaN(epoch.getTime())) {
+        return {
+            color: "#718096",
+            icon: "⚪",
+            text: "不明"
+        };
+    }
+
+    const ageHours =
+        (Date.now() - epoch.getTime()) / 3600000;
+
+    if (ageHours < 24) {
+        return {
+            color: "#16a34a",
+            icon: "🟢",
+            text: "新鮮"
+        };
+    }
+
+    if (ageHours < 72) {
+        return {
+            color: "#ca8a04",
+            icon: "🟡",
+            text: "やや古い"
+        };
+    }
+
+    if (ageHours < 168) {
+        return {
+            color: "#ea580c",
+            icon: "🟠",
+            text: "古い"
+        };
+    }
+
+    return {
+        color: "#dc2626",
+        icon: "🔴",
+        text: "要注意"
+    };
+}
+
+
 function popOf(r) {
 
     const c = catOf(r);
+    const fresh = freshnessOf(r.epoch_iso);
 
     return (
         "<b>" + r.name + "</b><br>" +
@@ -129,9 +214,7 @@ function popOf(r) {
         "color:white;" +
         "font-size:12px;" +
         "'>" +
-
         c[1] +
-
         "</span><br>" +
 
         "<b>NORAD ID：</b>" +
@@ -145,6 +228,26 @@ function popOf(r) {
 
         "<b>高度：</b>" +
         r.alt_km + " km<br>" +
+
+        "<hr>" +
+
+        "<b>TLEエポック：</b>" +
+        r.epoch_day + "<br>" +
+
+        "<b>エポック日時：</b>" +
+        r.epoch_utc + "<br>" +
+
+        "<b>経過時間：</b>" +
+        ageOf(r.epoch_iso) + "<br>" +
+
+        "<b>TLE鮮度：</b>" +
+        "<span style='" +
+        "font-weight:bold;" +
+        "color:" + fresh.color + ";" +
+        "'>" +
+        fresh.icon + " " +
+        fresh.text +
+        "</span><br>" +
 
         "<hr>" +
 
