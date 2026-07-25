@@ -2,103 +2,504 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<style>body{margin:0;font-family:sans-serif}.bar{padding:12px;background:#f7f3ea}#map{height:78vh;width:100vw}</style></head><body>
-<div class="bar"><b>Russia GEO Map</b><br>CelesTrak GEO TLEから抽出したRussia GEOの地図表示<br>表示衛星数：95 機</div>
+
+<style>
+
+body {
+    margin: 0;
+    font-family: sans-serif;
+}
+
+.bar {
+    padding: 12px;
+    background: #f7f3ea;
+}
+
+.search-box {
+    display: flex;
+    gap: 7px;
+    margin-top: 10px;
+}
+
+#satSearch {
+    flex: 1;
+    min-width: 0;
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #999;
+    border-radius: 8px;
+}
+
+#searchButton {
+    padding: 10px 15px;
+    border: 0;
+    border-radius: 8px;
+    background: #2378d3;
+    color: white;
+    font-size: 15px;
+    font-weight: bold;
+}
+
+#searchResult {
+    min-height: 20px;
+    margin-top: 6px;
+    font-size: 13px;
+}
+
+
+/* 地図を広く */
+#map {
+    height: 82vh;
+    width: 100%;
+}
+
+
+/* 詳細窓だけスクロール */
+.leaflet-popup {
+    max-width: 92vw;
+}
+
+.leaflet-popup-content-wrapper {
+    max-width: 420px;
+}
+
+.leaflet-popup-content {
+    max-height: 300px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    margin: 12px 18px;
+}
+
+.leaflet-popup-content::-webkit-scrollbar {
+    width: 5px;
+}
+
+.leaflet-popup-content::-webkit-scrollbar-thumb {
+    background: #999;
+    border-radius: 5px;
+}
+
+</style>
+</head>
+<body>
+
+
+<div class="bar">
+
+    <b>Russia GEO Map</b><br>
+
+    CelesTrak GEO + GPZから抽出した
+    ロシア・旧ソ連系GEO衛星<br>
+
+    表示衛星数：95 機
+
+    <div class="search-box">
+
+        <input
+            id="satSearch"
+            type="text"
+            placeholder="衛星名 または NORAD ID"
+            autocomplete="off"
+        >
+
+        <button id="searchButton">
+            🔍 検索
+        </button>
+
+    </div>
+
+    <div id="searchResult"></div>
+
+</div>
+
 <div id="map"></div>
 <script>
-const data = [{"name": "YAMAL 300K", "norad": "38978", "lat": "-0.0245", "lon": "-177.0615", "alt_km": "35786.3", "epoch_raw": "26203.57930361", "epoch_day": "2026年203日目", "epoch_utc": "2026/07/22 13:54:11 UTC", "epoch_iso": "2026-07-22T13:54:11.831904Z"}, {"name": "GORIZONT 10", "norad": "15144", "lat": "7.9581", "lon": "-169.5472", "alt_km": "35789.9", "epoch_raw": "26205.48864249", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 11:43:38 UTC", "epoch_iso": "2026-07-24T11:43:38.711136Z"}, {"name": "RADUGA 16", "norad": "15946", "lat": "8.5074", "lon": "-165.1611", "alt_km": "35779.7", "epoch_raw": "26204.58802068", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 14:06:44 UTC", "epoch_iso": "2026-07-23T14:06:44.986752Z"}, {"name": "GORIZONT 6", "norad": "13624", "lat": "7.1824", "lon": "-163.8376", "alt_km": "35774.8", "epoch_raw": "26205.47398773", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 11:22:32 UTC", "epoch_iso": "2026-07-24T11:22:32.539872Z"}, {"name": "GORIZONT 16", "norad": "19397", "lat": "9.7028", "lon": "-160.1752", "alt_km": "35824.5", "epoch_raw": "26205.44969303", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 10:47:33 UTC", "epoch_iso": "2026-07-24T10:47:33.477792Z"}, {"name": "RADUGA-1 8", "norad": "34264", "lat": "-2.1683", "lon": "-155.6526", "alt_km": "35877.1", "epoch_raw": "26205.27618890", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 06:37:42 UTC", "epoch_iso": "2026-07-24T06:37:42.720960Z"}, {"name": "YAMAL 102", "norad": "25897", "lat": "8.3747", "lon": "-137.5069", "alt_km": "35855.5", "epoch_raw": "26205.53613668", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 12:52:02 UTC", "epoch_iso": "2026-07-24T12:52:02.209152Z"}, {"name": "ELEKTRO-L 1 (GOMS 2)", "norad": "37344", "lat": "0.9635", "lon": "-127.2288", "alt_km": "35800.2", "epoch_raw": "26205.22367661", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 05:22:05 UTC", "epoch_iso": "2026-07-24T05:22:05.659104Z"}, {"name": "EXPRESS 1", "norad": "23319", "lat": "13.4117", "lon": "-118.4748", "alt_km": "35936.1", "epoch_raw": "26205.51601587", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 12:23:03 UTC", "epoch_iso": "2026-07-24T12:23:03.771168Z"}, {"name": "LUCH", "norad": "23426", "lat": "14.293", "lon": "-117.4423", "alt_km": "35830.5", "epoch_raw": "26204.46982308", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 11:16:32 UTC", "epoch_iso": "2026-07-23T11:16:32.714112Z"}, {"name": "EKRAN 2 DEB", "norad": "12996", "lat": "0.4922", "lon": "-99.0789", "alt_km": "35876.8", "epoch_raw": "26205.42995919", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 10:19:08 UTC", "epoch_iso": "2026-07-24T10:19:08.474016Z"}, {"name": "GORIZONT 30", "norad": "23108", "lat": "13.3502", "lon": "-90.3417", "alt_km": "35836.1", "epoch_raw": "26205.39947999", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 09:35:15 UTC", "epoch_iso": "2026-07-24T09:35:15.071136Z"}, {"name": "RADUGA 25", "norad": "20499", "lat": "10.3877", "lon": "-89.6729", "alt_km": "35814.4", "epoch_raw": "26205.39706997", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 09:31:46 UTC", "epoch_iso": "2026-07-24T09:31:46.845408Z"}, {"name": "RADUGA 21", "norad": "18631", "lat": "6.547", "lon": "-77.0421", "alt_km": "35768.5", "epoch_raw": "26205.33172657", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 07:57:41 UTC", "epoch_iso": "2026-07-24T07:57:41.175648Z"}, {"name": "GORIZONT 11", "norad": "15484", "lat": "-2.4498", "lon": "-36.0306", "alt_km": "35793.2", "epoch_raw": "26205.17541627", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 04:12:35 UTC", "epoch_iso": "2026-07-24T04:12:35.965728Z"}, {"name": "RADUGA 7", "norad": "12003", "lat": "-4.3203", "lon": "-30.456", "alt_km": "35778.2", "epoch_raw": "26205.03402958", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 00:49:00 UTC", "epoch_iso": "2026-07-24T00:49:00.155712Z"}, {"name": "LUCH-5B", "norad": "38977", "lat": "9.056", "lon": "-15.8998", "alt_km": "35770.2", "epoch_raw": "26205.32193885", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 07:43:35 UTC", "epoch_iso": "2026-07-24T07:43:35.516640Z"}, {"name": "ELEKTRO-L 2", "norad": "41105", "lat": "6.6552", "lon": "-14.3911", "alt_km": "35786.8", "epoch_raw": "26205.32237219", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 07:44:12 UTC", "epoch_iso": "2026-07-24T07:44:12.957216Z"}, {"name": "EXPRESS-AM8", "norad": "40895", "lat": "0.0057", "lon": "-14.0073", "alt_km": "35787.1", "epoch_raw": "26205.60742782", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 14:34:41 UTC", "epoch_iso": "2026-07-24T14:34:41.763648Z"}, {"name": "GORIZONT 27", "norad": "22245", "lat": "-2.8723", "lon": "-11.3694", "alt_km": "35848.9", "epoch_raw": "26205.17336278", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 04:09:38 UTC", "epoch_iso": "2026-07-24T04:09:38.544192Z"}, {"name": "EXPRESS-AM44", "norad": "33595", "lat": "3.5479", "lon": "-10.9627", "alt_km": "35777.9", "epoch_raw": "26205.32297885", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 07:45:05 UTC", "epoch_iso": "2026-07-24T07:45:05.372640Z"}, {"name": "EXPRESS-AM33", "norad": "32478", "lat": "4.2805", "lon": "7.4761", "alt_km": "35762.6", "epoch_raw": "26205.32670554", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 07:50:27 UTC", "epoch_iso": "2026-07-24T07:50:27.358656Z"}, {"name": "RADUGA-1 7", "norad": "28194", "lat": "-2.1177", "lon": "22.2108", "alt_km": "35783.1", "epoch_raw": "26203.69004447", "epoch_day": "2026年203日目", "epoch_utc": "2026/07/22 16:33:39 UTC", "epoch_iso": "2026-07-22T16:33:39.842208Z"}, {"name": "GORIZONT 33", "norad": "26372", "lat": "-8.0349", "lon": "34.3131", "alt_km": "35802.9", "epoch_raw": "26205.54608936", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 13:06:22 UTC", "epoch_iso": "2026-07-24T13:06:22.120704Z"}, {"name": "RADUGA-1M 3", "norad": "39375", "lat": "3.0257", "lon": "35.1246", "alt_km": "35790.5", "epoch_raw": "26205.32753093", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 07:51:38 UTC", "epoch_iso": "2026-07-24T07:51:38.672352Z"}, {"name": "EXPRESS-AMU1", "norad": "41191", "lat": "0.0125", "lon": "36.1014", "alt_km": "35787.7", "epoch_raw": "26205.54617603", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 13:06:29 UTC", "epoch_iso": "2026-07-24T13:06:29.608992Z"}, {"name": "EXPRESS-AM7", "norad": "40505", "lat": "-0.0047", "lon": "40.0359", "alt_km": "35790.3", "epoch_raw": "26205.54695603", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 13:07:37 UTC", "epoch_iso": "2026-07-24T13:07:37.000992Z"}, {"name": "GORIZONT 29", "norad": "22907", "lat": "-12.3487", "lon": "41.582", "alt_km": "35852.0", "epoch_raw": "26205.61515763", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 14:45:49 UTC", "epoch_iso": "2026-07-24T14:45:49.619232Z"}, {"name": "RADUGA 22", "norad": "19596", "lat": "-11.3089", "lon": "41.7885", "alt_km": "35802.5", "epoch_raw": "26204.97713013", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 23:27:04 UTC", "epoch_iso": "2026-07-23T23:27:04.043232Z"}, {"name": "RADUGA 6", "norad": "11708", "lat": "-4.5473", "lon": "45.6025", "alt_km": "35786.1", "epoch_raw": "26205.62447920", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 14:59:15 UTC", "epoch_iso": "2026-07-24T14:59:15.002880Z"}, {"name": "GORIZONT 3", "norad": "11648", "lat": "-4.6435", "lon": "48.0633", "alt_km": "35761.0", "epoch_raw": "26205.62424184", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 14:58:54 UTC", "epoch_iso": "2026-07-24T14:58:54.494976Z"}, {"name": "YAMAL 601", "norad": "44307", "lat": "0.0086", "lon": "49.0255", "alt_km": "35791.6", "epoch_raw": "26206.04772777", "epoch_day": "2026年206日目", "epoch_utc": "2026/07/25 01:08:43 UTC", "epoch_iso": "2026-07-25T01:08:43.679328Z"}, {"name": "RADUGA 31", "norad": "23010", "lat": "-13.1843", "lon": "49.4115", "alt_km": "35798.7", "epoch_raw": "26204.97869013", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 23:29:18 UTC", "epoch_iso": "2026-07-23T23:29:18.827232Z"}, {"name": "RADUGA 15", "norad": "15057", "lat": "-8.2823", "lon": "52.1231", "alt_km": "35807.3", "epoch_raw": "26204.90784341", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 21:47:17 UTC", "epoch_iso": "2026-07-23T21:47:17.670624Z"}, {"name": "RADUGA 26", "norad": "21016", "lat": "-12.7018", "lon": "52.6951", "alt_km": "35799.9", "epoch_raw": "26205.62537531", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 15:00:32 UTC", "epoch_iso": "2026-07-24T15:00:32.426784Z"}, {"name": "YAMAL 402", "norad": "39022", "lat": "0.5009", "lon": "54.9633", "alt_km": "35795.1", "epoch_raw": "26203.69645782", "epoch_day": "2026年203日目", "epoch_utc": "2026/07/22 16:42:53 UTC", "epoch_iso": "2026-07-22T16:42:53.955648Z"}, {"name": "EKRAN 6", "norad": "12120", "lat": "-4.5733", "lon": "55.6829", "alt_km": "35792.3", "epoch_raw": "26204.90836341", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 21:48:02 UTC", "epoch_iso": "2026-07-23T21:48:02.598624Z"}, {"name": "EXPRESS-AT2", "norad": "39613", "lat": "-0.0185", "lon": "55.9863", "alt_km": "35786.7", "epoch_raw": "26205.54990271", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 13:11:51 UTC", "epoch_iso": "2026-07-24T13:11:51.594144Z"}, {"name": "RADUGA 9", "norad": "12618", "lat": "-4.844", "lon": "58.4703", "alt_km": "35810.2", "epoch_raw": "26204.83777839", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 20:06:24 UTC", "epoch_iso": "2026-07-23T20:06:24.052896Z"}, {"name": "EKRAN 2 DEB", "norad": "59987", "lat": "-1.8618", "lon": "59.1187", "alt_km": "35831.7", "epoch_raw": "26204.90923009", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 21:49:17 UTC", "epoch_iso": "2026-07-23T21:49:17.479776Z"}, {"name": "RADUGA 17", "norad": "16250", "lat": "-9.0922", "lon": "59.4144", "alt_km": "35796.5", "epoch_raw": "26205.62512509", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 15:00:10 UTC", "epoch_iso": "2026-07-24T15:00:10.807776Z"}, {"name": "GORIZONT 19", "norad": "20263", "lat": "-12.018", "lon": "60.8763", "alt_km": "35787.3", "epoch_raw": "26204.90957676", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 21:49:47 UTC", "epoch_iso": "2026-07-23T21:49:47.432064Z"}, {"name": "GORIZONT 2", "norad": "11440", "lat": "-3.3903", "lon": "61.9084", "alt_km": "35773.1", "epoch_raw": "26204.83838506", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 20:07:16 UTC", "epoch_iso": "2026-07-23T20:07:16.469184Z"}, {"name": "LUCH-5X (OLYMP-K 2)", "norad": "55841", "lat": "0.0079", "lon": "61.9778", "alt_km": "35780.8", "epoch_raw": "26205.75154523", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 18:02:13 UTC", "epoch_iso": "2026-07-24T18:02:13.507872Z"}, {"name": "RADUGA 28", "norad": "21821", "lat": "-13.3571", "lon": "63.3054", "alt_km": "35761.2", "epoch_raw": "26205.62500128", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 15:00:00 UTC", "epoch_iso": "2026-07-24T15:00:00.110592Z"}, {"name": "EKRAN 20", "norad": "22210", "lat": "-13.6693", "lon": "64.1102", "alt_km": "35765.1", "epoch_raw": "26204.98129014", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 23:33:03 UTC", "epoch_iso": "2026-07-23T23:33:03.468096Z"}, {"name": "RADUGA 12", "norad": "13974", "lat": "-6.5764", "lon": "65.4096", "alt_km": "35784.3", "epoch_raw": "26205.62509159", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 15:00:07 UTC", "epoch_iso": "2026-07-24T15:00:07.913376Z"}, {"name": "RADUGA 1", "norad": "08513", "lat": "-0.5475", "lon": "67.2623", "alt_km": "35778.8", "epoch_raw": "26205.55236307", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 13:15:24 UTC", "epoch_iso": "2026-07-24T13:15:24.169248Z"}, {"name": "EXPRESS-AT1", "norad": "39612", "lat": "0.0582", "lon": "67.4094", "alt_km": "35783.4", "epoch_raw": "26205.62363456", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 14:58:02 UTC", "epoch_iso": "2026-07-24T14:58:02.025984Z"}, {"name": "RADUGA 2", "norad": "09416", "lat": "-0.7958", "lon": "68.5671", "alt_km": "35710.4", "epoch_raw": "26205.55253640", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 13:15:39 UTC", "epoch_iso": "2026-07-24T13:15:39.144960Z"}, {"name": "EKRAN 2 DEB", "norad": "11581", "lat": "-1.1242", "lon": "70.6396", "alt_km": "35757.9", "epoch_raw": "26205.62364950", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 14:58:03 UTC", "epoch_iso": "2026-07-24T14:58:03.316800Z"}, {"name": "RADUGA-1 2", "norad": "21038", "lat": "-12.6474", "lon": "71.449", "alt_km": "35818.4", "epoch_raw": "26204.91157010", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 21:52:39 UTC", "epoch_iso": "2026-07-23T21:52:39.656640Z"}, {"name": "LUCH-1", "norad": "23680", "lat": "-14.8814", "lon": "72.9452", "alt_km": "35801.3", "epoch_raw": "26204.98319682", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 23:35:48 UTC", "epoch_iso": "2026-07-23T23:35:48.205248Z"}, {"name": "RADUGA-1 5", "norad": "26477", "lat": "-13.4575", "lon": "74.4211", "alt_km": "35814.4", "epoch_raw": "26205.60951442", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 14:37:42 UTC", "epoch_iso": "2026-07-24T14:37:42.045888Z"}, {"name": "ELEKTRO-L 3", "norad": "44903", "lat": "-0.0158", "lon": "75.9959", "alt_km": "35792.8", "epoch_raw": "26205.62536791", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 15:00:31 UTC", "epoch_iso": "2026-07-24T15:00:31.787424Z"}, {"name": "ELEKTRO-L 5", "norad": "67756", "lat": "-0.1919", "lon": "76.1186", "alt_km": "35790.0", "epoch_raw": "26204.95064227", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 22:48:55 UTC", "epoch_iso": "2026-07-23T22:48:55.492128Z"}, {"name": "RADUGA 3", "norad": "10159", "lat": "-0.6877", "lon": "76.3573", "alt_km": "35737.6", "epoch_raw": "26205.55409641", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 13:17:53 UTC", "epoch_iso": "2026-07-24T13:17:53.929824Z"}, {"name": "RADUGA 10", "norad": "12897", "lat": "-3.3135", "lon": "77.8879", "alt_km": "35775.9", "epoch_raw": "26205.60782928", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 14:35:16 UTC", "epoch_iso": "2026-07-24T14:35:16.449792Z"}, {"name": "RADUGA 32", "norad": "23448", "lat": "-14.258", "lon": "79.0982", "alt_km": "35756.1", "epoch_raw": "26205.60979917", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 14:38:06 UTC", "epoch_iso": "2026-07-24T14:38:06.648288Z"}, {"name": "RADUGA 30", "norad": "22836", "lat": "-13.8364", "lon": "79.3636", "alt_km": "35777.6", "epoch_raw": "26205.60979987", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 14:38:06 UTC", "epoch_iso": "2026-07-24T14:38:06.708768Z"}, {"name": "EXPRESS 80", "norad": "45986", "lat": "-0.0024", "lon": "79.9884", "alt_km": "35793.5", "epoch_raw": "26205.93715740", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 22:29:30 UTC", "epoch_iso": "2026-07-24T22:29:30.399360Z"}, {"name": "RADUGA 4", "norad": "10987", "lat": "-0.856", "lon": "80.8986", "alt_km": "35776.4", "epoch_raw": "26204.84228508", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 20:12:53 UTC", "epoch_iso": "2026-07-23T20:12:53.430912Z"}, {"name": "ELEKTRO (GOMS 1)", "norad": "23327", "lat": "-14.2965", "lon": "81.5123", "alt_km": "35751.7", "epoch_raw": "26205.61006990", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 14:38:30 UTC", "epoch_iso": "2026-07-24T14:38:30.039360Z"}, {"name": "EKRAN 9", "norad": "13554", "lat": "-3.5226", "lon": "82.5826", "alt_km": "35717.9", "epoch_raw": "26204.84263175", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 20:13:23 UTC", "epoch_iso": "2026-07-23T20:13:23.383200Z"}, {"name": "RADUGA 14", "norad": "14725", "lat": "-5.4693", "lon": "83.9714", "alt_km": "35789.0", "epoch_raw": "26205.60507997", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 14:31:18 UTC", "epoch_iso": "2026-07-24T14:31:18.909408Z"}, {"name": "YAMAL 201", "norad": "28094", "lat": "-5.7228", "lon": "83.9908", "alt_km": "35780.9", "epoch_raw": "26205.55574308", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 13:20:16 UTC", "epoch_iso": "2026-07-24T13:20:16.202112Z"}, {"name": "GORIZONT 20", "norad": "20659", "lat": "-11.4335", "lon": "84.728", "alt_km": "35758.5", "epoch_raw": "26205.62053251", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 14:53:34 UTC", "epoch_iso": "2026-07-24T14:53:34.008864Z"}, {"name": "RADUGA 5", "norad": "11343", "lat": "-0.9274", "lon": "85.0038", "alt_km": "35792.8", "epoch_raw": "26205.60649404", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 14:33:21 UTC", "epoch_iso": "2026-07-24T14:33:21.085056Z"}, {"name": "EKRAN 7", "norad": "12564", "lat": "-2.2856", "lon": "85.2848", "alt_km": "35798.7", "epoch_raw": "26204.83030674", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 19:55:38 UTC", "epoch_iso": "2026-07-23T19:55:38.502336Z"}, {"name": "EKRAN 2", "norad": "10365", "lat": "0.0166", "lon": "87.6681", "alt_km": "35663.2", "epoch_raw": "26205.55634975", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 13:21:08 UTC", "epoch_iso": "2026-07-24T13:21:08.618400Z"}, {"name": "YAMAL 401", "norad": "40345", "lat": "-0.0044", "lon": "89.9472", "alt_km": "35789.7", "epoch_raw": "26205.67994669", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 16:19:07 UTC", "epoch_iso": "2026-07-24T16:19:07.394016Z"}, {"name": "RADUGA-1 4", "norad": "25642", "lat": "-15.5945", "lon": "90.0122", "alt_km": "35788.1", "epoch_raw": "26205.61759572", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 14:49:20 UTC", "epoch_iso": "2026-07-24T14:49:20.270208Z"}, {"name": "EKRAN 3", "norad": "11273", "lat": "-0.3136", "lon": "90.8937", "alt_km": "35607.7", "epoch_raw": "26205.15788926", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 03:47:21 UTC", "epoch_iso": "2026-07-24T03:47:21.632064Z"}, {"name": "RADUGA-1 3", "norad": "22981", "lat": "-13.3233", "lon": "91.3414", "alt_km": "35774.0", "epoch_raw": "26205.61786450", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 14:49:43 UTC", "epoch_iso": "2026-07-24T14:49:43.492800Z"}, {"name": "LUCH-5V", "norad": "39727", "lat": "-2.8125", "lon": "94.6566", "alt_km": "35793.9", "epoch_raw": "26205.62900792", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 15:05:46 UTC", "epoch_iso": "2026-07-24T15:05:46.284288Z"}, {"name": "EKRAN 4", "norad": "11561", "lat": "-0.2565", "lon": "94.9704", "alt_km": "35837.1", "epoch_raw": "26205.60811653", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 14:35:41 UTC", "epoch_iso": "2026-07-24T14:35:41.268192Z"}, {"name": "RADUGA 23", "norad": "19928", "lat": "-9.0245", "lon": "95.2207", "alt_km": "35826.7", "epoch_raw": "26205.83031006", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 19:55:38 UTC", "epoch_iso": "2026-07-24T19:55:38.789184Z"}, {"name": "EXPRESS 103", "norad": "45985", "lat": "-0.0041", "lon": "96.4931", "alt_km": "35787.5", "epoch_raw": "26205.62935458", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 15:06:16 UTC", "epoch_iso": "2026-07-24T15:06:16.235712Z"}, {"name": "GORIZONT 9", "norad": "14940", "lat": "-4.1186", "lon": "97.1773", "alt_km": "35768.9", "epoch_raw": "26205.60838685", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 14:36:04 UTC", "epoch_iso": "2026-07-24T14:36:04.623840Z"}, {"name": "GORIZONT 21", "norad": "20923", "lat": "-10.022", "lon": "98.0518", "alt_km": "35798.1", "epoch_raw": "26205.82475256", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 19:47:38 UTC", "epoch_iso": "2026-07-24T19:47:38.621184Z"}, {"name": "EKRAN 11", "norad": "14377", "lat": "-2.2872", "lon": "100.2986", "alt_km": "35782.8", "epoch_raw": "26204.72966840", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 17:30:43 UTC", "epoch_iso": "2026-07-23T17:30:43.349760Z"}, {"name": "EXPRESS 2", "norad": "24435", "lat": "-13.281", "lon": "101.9905", "alt_km": "35765.4", "epoch_raw": "26205.81518380", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 19:33:51 UTC", "epoch_iso": "2026-07-24T19:33:51.880320Z"}, {"name": "EXPRESS AMU-3", "norad": "50002", "lat": "-0.0247", "lon": "102.8916", "alt_km": "35786.5", "epoch_raw": "26205.87366046", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 20:58:04 UTC", "epoch_iso": "2026-07-24T20:58:04.263744Z"}, {"name": "RADUGA 24", "norad": "20367", "lat": "-8.4083", "lon": "104.7216", "alt_km": "35780.3", "epoch_raw": "26205.62358578", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 14:57:57 UTC", "epoch_iso": "2026-07-24T14:57:57.811392Z"}, {"name": "GORIZONT 12", "norad": "16769", "lat": "-4.2124", "lon": "109.3743", "alt_km": "35767.2", "epoch_raw": "26205.24280844", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 05:49:38 UTC", "epoch_iso": "2026-07-24T05:49:38.649216Z"}, {"name": "RADUGA 27", "norad": "21132", "lat": "-7.1731", "lon": "117.5478", "alt_km": "35768.7", "epoch_raw": "26204.77795130", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 18:40:14 UTC", "epoch_iso": "2026-07-23T18:40:14.992320Z"}, {"name": "RADUGA 29", "norad": "22557", "lat": "-7.5353", "lon": "125.4175", "alt_km": "35786.4", "epoch_raw": "26205.27849134", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 06:41:01 UTC", "epoch_iso": "2026-07-24T06:41:01.651776Z"}, {"name": "GORIZONT 22", "norad": "20953", "lat": "-2.6285", "lon": "138.304", "alt_km": "35774.2", "epoch_raw": "26204.71101439", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 17:03:51 UTC", "epoch_iso": "2026-07-23T17:03:51.643296Z"}, {"name": "EXPRESS-AM5", "norad": "39487", "lat": "-0.0069", "lon": "140.0235", "alt_km": "35787.8", "epoch_raw": "26204.99645689", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 23:54:53 UTC", "epoch_iso": "2026-07-23T23:54:53.875296Z"}, {"name": "GORIZONT 32", "norad": "23880", "lat": "-6.7885", "lon": "140.1337", "alt_km": "35775.2", "epoch_raw": "26205.28152469", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 06:45:23 UTC", "epoch_iso": "2026-07-24T06:45:23.733216Z"}, {"name": "EXPRESS AMU-7", "norad": "50001", "lat": "-0.0082", "lon": "145.0009", "alt_km": "35785.4", "epoch_raw": "26205.63901243", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 15:20:10 UTC", "epoch_iso": "2026-07-24T15:20:10.673952Z"}, {"name": "EKRAN 2 DEB", "norad": "29014", "lat": "3.7439", "lon": "155.388", "alt_km": "35803.5", "epoch_raw": "26205.56990095", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 13:40:39 UTC", "epoch_iso": "2026-07-24T13:40:39.442080Z"}, {"name": "YAMAL 202", "norad": "28089", "lat": "-6.3662", "lon": "163.5582", "alt_km": "35796.5", "epoch_raw": "26205.46017050", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 11:02:38 UTC", "epoch_iso": "2026-07-24T11:02:38.731200Z"}, {"name": "ELEKTRO-L 4", "norad": "55506", "lat": "0.0683", "lon": "165.7614", "alt_km": "35793.2", "epoch_raw": "26204.70221324", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 16:51:11 UTC", "epoch_iso": "2026-07-23T16:51:11.223936Z"}, {"name": "LUCH-5A", "norad": "37951", "lat": "-8.7207", "lon": "167.1827", "alt_km": "35796.7", "epoch_raw": "26205.57412616", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 13:46:44 UTC", "epoch_iso": "2026-07-24T13:46:44.500224Z"}];
-const map = L.map("map").setView([0,140],2);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:6, attribution:"OpenStreetMap"}).addTo(map);
+const data = [{"name": "YAMAL 300K", "norad": "38978", "lat": "-0.0212", "lon": "-177.0616", "alt_km": "35786.1", "launch_date": "2012-11-02", "launch_site": "TYMSC", "epoch_raw": "26203.57930361", "epoch_day": "2026年203日目", "epoch_utc": "2026/07/22 13:54:11 UTC", "epoch_iso": "2026-07-22T13:54:11.831904Z"}, {"name": "GORIZONT 10", "norad": "15144", "lat": "8.7541", "lon": "-169.3733", "alt_km": "35793.9", "launch_date": "1984-08-01", "launch_site": "TYMSC", "epoch_raw": "26205.48864249", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 11:43:38 UTC", "epoch_iso": "2026-07-24T11:43:38.711136Z"}, {"name": "RADUGA 16", "norad": "15946", "lat": "9.303", "lon": "-164.9543", "alt_km": "35781.7", "launch_date": "1985-08-08", "launch_site": "TYMSC", "epoch_raw": "26204.58802068", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 14:06:44 UTC", "epoch_iso": "2026-07-23T14:06:44.986752Z"}, {"name": "GORIZONT 6", "norad": "13624", "lat": "7.1659", "lon": "-163.6882", "alt_km": "35778.2", "launch_date": "1982-10-20", "launch_site": "TYMSC", "epoch_raw": "26205.47398773", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 11:22:32 UTC", "epoch_iso": "2026-07-24T11:22:32.539872Z"}, {"name": "GORIZONT 16", "norad": "19397", "lat": "11.1448", "lon": "-159.9404", "alt_km": "35818.7", "launch_date": "1988-08-18", "launch_site": "TYMSC", "epoch_raw": "26205.44969303", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 10:47:33 UTC", "epoch_iso": "2026-07-24T10:47:33.477792Z"}, {"name": "RADUGA-1 8", "norad": "34264", "lat": "1.6274", "lon": "-156.1003", "alt_km": "35869.6", "launch_date": "2009-02-28", "launch_site": "TYMSC", "epoch_raw": "26205.27618890", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 06:37:42 UTC", "epoch_iso": "2026-07-24T06:37:42.720960Z"}, {"name": "YAMAL 102", "norad": "25897", "lat": "11.3358", "lon": "-137.5231", "alt_km": "35856.6", "launch_date": "1999-09-06", "launch_site": "TYMSC", "epoch_raw": "26205.53613668", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 12:52:02 UTC", "epoch_iso": "2026-07-24T12:52:02.209152Z"}, {"name": "ELEKTRO-L 1 (GOMS 2)", "norad": "37344", "lat": "3.9275", "lon": "-127.4592", "alt_km": "35797.7", "launch_date": "2011-01-20", "launch_site": "TYMSC", "epoch_raw": "26205.22367661", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 05:22:05 UTC", "epoch_iso": "2026-07-24T05:22:05.659104Z"}, {"name": "EXPRESS 1", "norad": "23319", "lat": "14.501", "lon": "-118.0576", "alt_km": "35934.3", "launch_date": "1994-10-13", "launch_site": "TYMSC", "epoch_raw": "26205.51601587", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 12:23:03 UTC", "epoch_iso": "2026-07-24T12:23:03.771168Z"}, {"name": "LUCH", "norad": "23426", "lat": "14.7306", "lon": "-116.8768", "alt_km": "35823.6", "launch_date": "1994-12-16", "launch_site": "TYMSC", "epoch_raw": "26204.46982308", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 11:16:32 UTC", "epoch_iso": "2026-07-23T11:16:32.714112Z"}, {"name": "EKRAN 2 DEB", "norad": "12996", "lat": "-0.8206", "lon": "-99.1786", "alt_km": "35852.1", "launch_date": "1977-09-20", "launch_site": "TYMSC", "epoch_raw": "26205.42995919", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 10:19:08 UTC", "epoch_iso": "2026-07-24T10:19:08.474016Z"}, {"name": "GORIZONT 30", "norad": "23108", "lat": "11.3091", "lon": "-90.0654", "alt_km": "35834.4", "launch_date": "1994-05-20", "launch_site": "TYMSC", "epoch_raw": "26205.39947999", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 09:35:15 UTC", "epoch_iso": "2026-07-24T09:35:15.071136Z"}, {"name": "RADUGA 25", "norad": "20499", "lat": "7.8309", "lon": "-89.6377", "alt_km": "35807.0", "launch_date": "1990-02-15", "launch_site": "TYMSC", "epoch_raw": "26205.39706997", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 09:31:46 UTC", "epoch_iso": "2026-07-24T09:31:46.845408Z"}, {"name": "RADUGA 21", "norad": "18631", "lat": "3.3897", "lon": "-77.2385", "alt_km": "35767.5", "launch_date": "1987-12-10", "launch_site": "TYMSC", "epoch_raw": "26205.33172657", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 07:57:41 UTC", "epoch_iso": "2026-07-24T07:57:41.175648Z"}, {"name": "GORIZONT 11", "norad": "15484", "lat": "-5.0423", "lon": "-36.1787", "alt_km": "35789.8", "launch_date": "1985-01-18", "launch_site": "TYMSC", "epoch_raw": "26205.17541627", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 04:12:35 UTC", "epoch_iso": "2026-07-24T04:12:35.965728Z"}, {"name": "RADUGA 7", "norad": "12003", "lat": "-5.3346", "lon": "-30.4078", "alt_km": "35763.6", "launch_date": "1980-10-05", "launch_site": "TYMSC", "epoch_raw": "26205.03402958", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 00:49:00 UTC", "epoch_iso": "2026-07-24T00:49:00.155712Z"}, {"name": "LUCH-5B", "norad": "38977", "lat": "6.902", "lon": "-15.8361", "alt_km": "35769.3", "launch_date": "2012-11-02", "launch_site": "TYMSC", "epoch_raw": "26205.32193885", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 07:43:35 UTC", "epoch_iso": "2026-07-24T07:43:35.516640Z"}, {"name": "ELEKTRO-L 2", "norad": "41105", "lat": "5.8686", "lon": "-14.2992", "alt_km": "35786.1", "launch_date": "2015-12-11", "launch_site": "TYMSC", "epoch_raw": "26205.32237219", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 07:44:12 UTC", "epoch_iso": "2026-07-24T07:44:12.957216Z"}, {"name": "EXPRESS-AM8", "norad": "40895", "lat": "0.0019", "lon": "-14.0079", "alt_km": "35786.6", "launch_date": "2015-09-14", "launch_site": "TYMSC", "epoch_raw": "26205.60742782", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 14:34:41 UTC", "epoch_iso": "2026-07-24T14:34:41.763648Z"}, {"name": "GORIZONT 27", "norad": "22245", "lat": "-6.8527", "lon": "-11.7979", "alt_km": "35851.4", "launch_date": "1992-11-27", "launch_site": "TYMSC", "epoch_raw": "26205.17336278", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 04:09:38 UTC", "epoch_iso": "2026-07-24T04:09:38.544192Z"}, {"name": "EXPRESS-AM44", "norad": "33595", "lat": "3.2145", "lon": "-10.9292", "alt_km": "35783.0", "launch_date": "2009-02-11", "launch_site": "TYMSC", "epoch_raw": "26205.32297885", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 07:45:05 UTC", "epoch_iso": "2026-07-24T07:45:05.372640Z"}, {"name": "EXPRESS-AM33", "norad": "32478", "lat": "3.3134", "lon": "7.5183", "alt_km": "35751.1", "launch_date": "2008-01-28", "launch_site": "TYMSC", "epoch_raw": "26205.32670554", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 07:50:27 UTC", "epoch_iso": "2026-07-24T07:50:27.358656Z"}, {"name": "RADUGA-1 7", "norad": "28194", "lat": "-6.1959", "lon": "21.8021", "alt_km": "35780.6", "launch_date": "2004-03-27", "launch_site": "TYMSC", "epoch_raw": "26203.69004447", "epoch_day": "2026年203日目", "epoch_utc": "2026/07/22 16:33:39 UTC", "epoch_iso": "2026-07-22T16:33:39.842208Z"}, {"name": "GORIZONT 33", "norad": "26372", "lat": "-11.1606", "lon": "34.2889", "alt_km": "35803.0", "launch_date": "2000-06-06", "launch_site": "TYMSC", "epoch_raw": "26205.54608936", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 13:06:22 UTC", "epoch_iso": "2026-07-24T13:06:22.120704Z"}, {"name": "RADUGA-1M 3", "norad": "39375", "lat": "1.2437", "lon": "35.0468", "alt_km": "35788.7", "launch_date": "2013-11-11", "launch_site": "TYMSC", "epoch_raw": "26205.32753093", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 07:51:38 UTC", "epoch_iso": "2026-07-24T07:51:38.672352Z"}, {"name": "EXPRESS-AMU1", "norad": "41191", "lat": "0.0001", "lon": "36.0986", "alt_km": "35790.9", "launch_date": "2015-12-24", "launch_site": "TYMSC", "epoch_raw": "26205.54617603", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 13:06:29 UTC", "epoch_iso": "2026-07-24T13:06:29.608992Z"}, {"name": "EXPRESS-AM7", "norad": "40505", "lat": "-0.0161", "lon": "40.0307", "alt_km": "35794.3", "launch_date": "2015-03-18", "launch_site": "TYMSC", "epoch_raw": "26205.54695603", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 13:07:37 UTC", "epoch_iso": "2026-07-24T13:07:37.000992Z"}, {"name": "GORIZONT 29", "norad": "22907", "lat": "-13.785", "lon": "41.9646", "alt_km": "35839.3", "launch_date": "1993-11-18", "launch_site": "TYMSC", "epoch_raw": "26205.61515763", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 14:45:49 UTC", "epoch_iso": "2026-07-24T14:45:49.619232Z"}, {"name": "RADUGA 22", "norad": "19596", "lat": "-11.4341", "lon": "42.1407", "alt_km": "35809.8", "launch_date": "1988-10-20", "launch_site": "TYMSC", "epoch_raw": "26204.97713013", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 23:27:04 UTC", "epoch_iso": "2026-07-23T23:27:04.043232Z"}, {"name": "RADUGA 6", "norad": "11708", "lat": "-3.2979", "lon": "45.6047", "alt_km": "35785.6", "launch_date": "1980-02-20", "launch_site": "TYMSC", "epoch_raw": "26205.62447920", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 14:59:15 UTC", "epoch_iso": "2026-07-24T14:59:15.002880Z"}, {"name": "GORIZONT 3", "norad": "11648", "lat": "-3.3169", "lon": "48.0789", "alt_km": "35772.1", "launch_date": "1979-12-28", "launch_site": "TYMSC", "epoch_raw": "26205.62424184", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 14:58:54 UTC", "epoch_iso": "2026-07-24T14:58:54.494976Z"}, {"name": "YAMAL 601", "norad": "44307", "lat": "-0.003", "lon": "49.0195", "alt_km": "35794.5", "launch_date": "2019-05-30", "launch_site": "TYMSC", "epoch_raw": "26206.04772777", "epoch_day": "2026年206日目", "epoch_utc": "2026/07/25 01:08:43 UTC", "epoch_iso": "2026-07-25T01:08:43.679328Z"}, {"name": "RADUGA 31", "norad": "23010", "lat": "-14.1223", "lon": "49.9067", "alt_km": "35800.9", "launch_date": "1994-02-18", "launch_site": "TYMSC", "epoch_raw": "26204.97869013", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 23:29:18 UTC", "epoch_iso": "2026-07-23T23:29:18.827232Z"}, {"name": "RADUGA 15", "norad": "15057", "lat": "-7.0737", "lon": "52.2331", "alt_km": "35811.3", "launch_date": "1984-06-22", "launch_site": "TYMSC", "epoch_raw": "26204.90784341", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 21:47:17 UTC", "epoch_iso": "2026-07-23T21:47:17.670624Z"}, {"name": "RADUGA 26", "norad": "21016", "lat": "-12.6162", "lon": "53.1356", "alt_km": "35802.2", "launch_date": "1990-12-20", "launch_site": "TYMSC", "epoch_raw": "26205.62537531", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 15:00:32 UTC", "epoch_iso": "2026-07-24T15:00:32.426784Z"}, {"name": "YAMAL 402", "norad": "39022", "lat": "0.0772", "lon": "54.9491", "alt_km": "35798.7", "launch_date": "2012-12-08", "launch_site": "TYMSC", "epoch_raw": "26203.69645782", "epoch_day": "2026年203日目", "epoch_utc": "2026/07/22 16:42:53 UTC", "epoch_iso": "2026-07-22T16:42:53.955648Z"}, {"name": "EKRAN 6", "norad": "12120", "lat": "-3.0714", "lon": "55.657", "alt_km": "35786.1", "launch_date": "1980-12-26", "launch_site": "TYMSC", "epoch_raw": "26204.90836341", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 21:48:02 UTC", "epoch_iso": "2026-07-23T21:48:02.598624Z"}, {"name": "EXPRESS-AT2", "norad": "39613", "lat": "-0.0272", "lon": "55.9859", "alt_km": "35786.5", "launch_date": "2014-03-15", "launch_site": "TYMSC", "epoch_raw": "26205.54990271", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 13:11:51 UTC", "epoch_iso": "2026-07-24T13:11:51.594144Z"}, {"name": "RADUGA 9", "norad": "12618", "lat": "-3.2608", "lon": "58.4302", "alt_km": "35811.7", "launch_date": "1981-07-30", "launch_site": "TYMSC", "epoch_raw": "26204.83777839", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 20:06:24 UTC", "epoch_iso": "2026-07-23T20:06:24.052896Z"}, {"name": "EKRAN 2 DEB", "norad": "59987", "lat": "-0.6689", "lon": "59.0442", "alt_km": "35848.4", "launch_date": "1977-09-20", "launch_site": "TYMSC", "epoch_raw": "26204.90923009", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 21:49:17 UTC", "epoch_iso": "2026-07-23T21:49:17.479776Z"}, {"name": "RADUGA 17", "norad": "16250", "lat": "-7.7253", "lon": "59.5537", "alt_km": "35812.3", "launch_date": "1985-11-15", "launch_site": "TYMSC", "epoch_raw": "26205.62512509", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 15:00:10 UTC", "epoch_iso": "2026-07-24T15:00:10.807776Z"}, {"name": "GORIZONT 19", "norad": "20263", "lat": "-11.1236", "lon": "61.2356", "alt_km": "35787.4", "launch_date": "1989-09-28", "launch_site": "TYMSC", "epoch_raw": "26204.90957676", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 21:49:47 UTC", "epoch_iso": "2026-07-23T21:49:47.432064Z"}, {"name": "GORIZONT 2", "norad": "11440", "lat": "-1.8251", "lon": "61.8729", "alt_km": "35771.7", "launch_date": "1979-07-05", "launch_site": "TYMSC", "epoch_raw": "26204.83838506", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 20:07:16 UTC", "epoch_iso": "2026-07-23T20:07:16.469184Z"}, {"name": "LUCH-5X (OLYMP-K 2)", "norad": "55841", "lat": "-0.0061", "lon": "61.9827", "alt_km": "35780.0", "launch_date": "2023-03-12", "launch_site": "TYMSC", "epoch_raw": "26205.75154523", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 18:02:13 UTC", "epoch_iso": "2026-07-24T18:02:13.507872Z"}, {"name": "RADUGA 28", "norad": "21821", "lat": "-12.725", "lon": "63.7902", "alt_km": "35767.6", "launch_date": "1991-12-19", "launch_site": "TYMSC", "epoch_raw": "26205.62500128", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 15:00:00 UTC", "epoch_iso": "2026-07-24T15:00:00.110592Z"}, {"name": "EKRAN 20", "norad": "22210", "lat": "-13.2002", "lon": "64.6299", "alt_km": "35769.9", "launch_date": "1992-10-30", "launch_site": "TYMSC", "epoch_raw": "26204.98129014", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 23:33:03 UTC", "epoch_iso": "2026-07-23T23:33:03.468096Z"}, {"name": "RADUGA 12", "norad": "13974", "lat": "-4.7701", "lon": "65.4114", "alt_km": "35783.3", "launch_date": "1983-04-08", "launch_site": "TYMSC", "epoch_raw": "26205.62509159", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 15:00:07 UTC", "epoch_iso": "2026-07-24T15:00:07.913376Z"}, {"name": "RADUGA 1", "norad": "08513", "lat": "0.2963", "lon": "67.2479", "alt_km": "35784.3", "launch_date": "", "launch_site": "", "epoch_raw": "26205.55236307", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 13:15:24 UTC", "epoch_iso": "2026-07-24T13:15:24.169248Z"}, {"name": "EXPRESS-AT1", "norad": "39612", "lat": "-0.059", "lon": "67.4065", "alt_km": "35788.8", "launch_date": "2014-03-15", "launch_site": "TYMSC", "epoch_raw": "26205.62363456", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 14:58:02 UTC", "epoch_iso": "2026-07-24T14:58:02.025984Z"}, {"name": "RADUGA 2", "norad": "09416", "lat": "0.262", "lon": "68.6123", "alt_km": "35684.2", "launch_date": "", "launch_site": "", "epoch_raw": "26205.55253640", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 13:15:39 UTC", "epoch_iso": "2026-07-24T13:15:39.144960Z"}, {"name": "EKRAN 2 DEB", "norad": "11581", "lat": "0.1323", "lon": "70.6055", "alt_km": "35779.2", "launch_date": "1977-09-20", "launch_site": "TYMSC", "epoch_raw": "26205.62364950", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 14:58:03 UTC", "epoch_iso": "2026-07-24T14:58:03.316800Z"}, {"name": "RADUGA-1 2", "norad": "21038", "lat": "-11.2849", "lon": "71.7753", "alt_km": "35821.2", "launch_date": "1990-12-27", "launch_site": "TYMSC", "epoch_raw": "26204.91157010", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 21:52:39 UTC", "epoch_iso": "2026-07-23T21:52:39.656640Z"}, {"name": "LUCH-1", "norad": "23680", "lat": "-14.8573", "lon": "73.5596", "alt_km": "35808.9", "launch_date": "1995-10-11", "launch_site": "TYMSC", "epoch_raw": "26204.98319682", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 23:35:48 UTC", "epoch_iso": "2026-07-23T23:35:48.205248Z"}, {"name": "RADUGA-1 5", "norad": "26477", "lat": "-13.9982", "lon": "74.9278", "alt_km": "35814.4", "launch_date": "2000-08-28", "launch_site": "TYMSC", "epoch_raw": "26205.60951442", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 14:37:42 UTC", "epoch_iso": "2026-07-24T14:37:42.045888Z"}, {"name": "ELEKTRO-L 3", "norad": "44903", "lat": "-0.1306", "lon": "75.9895", "alt_km": "35793.3", "launch_date": "2019-12-24", "launch_site": "TYMSC", "epoch_raw": "26205.62536791", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 15:00:31 UTC", "epoch_iso": "2026-07-24T15:00:31.787424Z"}, {"name": "ELEKTRO-L 5", "norad": "67756", "lat": "-0.1648", "lon": "76.1144", "alt_km": "35792.3", "launch_date": "2026-02-12", "launch_site": "TYMSC", "epoch_raw": "26204.95064227", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 22:48:55 UTC", "epoch_iso": "2026-07-23T22:48:55.492128Z"}, {"name": "RADUGA 3", "norad": "10159", "lat": "0.5727", "lon": "76.3462", "alt_km": "35747.7", "launch_date": "1977-07-23", "launch_site": "TYMSC", "epoch_raw": "26205.55409641", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 13:17:53 UTC", "epoch_iso": "2026-07-24T13:17:53.929824Z"}, {"name": "RADUGA 10", "norad": "12897", "lat": "-1.3737", "lon": "77.8054", "alt_km": "35780.0", "launch_date": "1981-10-09", "launch_site": "TYMSC", "epoch_raw": "26205.60782928", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 14:35:16 UTC", "epoch_iso": "2026-07-24T14:35:16.449792Z"}, {"name": "RADUGA 32", "norad": "23448", "lat": "-13.1307", "lon": "79.6212", "alt_km": "35759.5", "launch_date": "1994-12-28", "launch_site": "TYMSC", "epoch_raw": "26205.60979917", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 14:38:06 UTC", "epoch_iso": "2026-07-24T14:38:06.648288Z"}, {"name": "RADUGA 30", "norad": "22836", "lat": "-12.4376", "lon": "79.808", "alt_km": "35773.5", "launch_date": "1993-09-30", "launch_site": "TYMSC", "epoch_raw": "26205.60979987", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 14:38:06 UTC", "epoch_iso": "2026-07-24T14:38:06.708768Z"}, {"name": "EXPRESS 80", "norad": "45986", "lat": "-0.0028", "lon": "79.9822", "alt_km": "35792.9", "launch_date": "2020-07-30", "launch_site": "TYMSC", "epoch_raw": "26205.93715740", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 22:29:30 UTC", "epoch_iso": "2026-07-24T22:29:30.399360Z"}, {"name": "RADUGA 4", "norad": "10987", "lat": "0.614", "lon": "80.8562", "alt_km": "35768.2", "launch_date": "1978-07-18", "launch_site": "TYMSC", "epoch_raw": "26204.84228508", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 20:12:53 UTC", "epoch_iso": "2026-07-23T20:12:53.430912Z"}, {"name": "ELEKTRO (GOMS 1)", "norad": "23327", "lat": "-12.8478", "lon": "82.005", "alt_km": "35755.4", "launch_date": "1994-10-31", "launch_site": "TYMSC", "epoch_raw": "26205.61006990", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 14:38:30 UTC", "epoch_iso": "2026-07-24T14:38:30.039360Z"}, {"name": "EKRAN 9", "norad": "13554", "lat": "-1.4653", "lon": "82.5552", "alt_km": "35699.0", "launch_date": "1982-09-16", "launch_site": "TYMSC", "epoch_raw": "26204.84263175", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 20:13:23 UTC", "epoch_iso": "2026-07-23T20:13:23.383200Z"}, {"name": "RADUGA 14", "norad": "14725", "lat": "-3.1825", "lon": "83.8751", "alt_km": "35790.0", "launch_date": "1984-02-15", "launch_site": "TYMSC", "epoch_raw": "26205.60507997", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 14:31:18 UTC", "epoch_iso": "2026-07-24T14:31:18.909408Z"}, {"name": "YAMAL 201", "norad": "28094", "lat": "-7.8792", "lon": "83.9905", "alt_km": "35787.7", "launch_date": "2003-11-24", "launch_site": "TYMSC", "epoch_raw": "26205.55574308", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 13:20:16 UTC", "epoch_iso": "2026-07-24T13:20:16.202112Z"}, {"name": "GORIZONT 20", "norad": "20659", "lat": "-9.1691", "lon": "84.9018", "alt_km": "35764.9", "launch_date": "1990-06-20", "launch_site": "TYMSC", "epoch_raw": "26205.62053251", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 14:53:34 UTC", "epoch_iso": "2026-07-24T14:53:34.008864Z"}, {"name": "RADUGA 5", "norad": "11343", "lat": "0.7004", "lon": "84.923", "alt_km": "35796.8", "launch_date": "1979-04-25", "launch_site": "TYMSC", "epoch_raw": "26205.60649404", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 14:33:21 UTC", "epoch_iso": "2026-07-24T14:33:21.085056Z"}, {"name": "EKRAN 7", "norad": "12564", "lat": "-0.3095", "lon": "85.1768", "alt_km": "35793.3", "launch_date": "1981-06-26", "launch_site": "TYMSC", "epoch_raw": "26204.83030674", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 19:55:38 UTC", "epoch_iso": "2026-07-23T19:55:38.502336Z"}, {"name": "EKRAN 2", "norad": "10365", "lat": "1.3032", "lon": "87.7345", "alt_km": "35661.4", "launch_date": "1977-09-20", "launch_site": "TYMSC", "epoch_raw": "26205.55634975", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 13:21:08 UTC", "epoch_iso": "2026-07-24T13:21:08.618400Z"}, {"name": "YAMAL 401", "norad": "40345", "lat": "-0.0067", "lon": "89.9443", "alt_km": "35789.2", "launch_date": "2014-12-15", "launch_site": "TYMSC", "epoch_raw": "26205.67994669", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 16:19:07 UTC", "epoch_iso": "2026-07-24T16:19:07.394016Z"}, {"name": "RADUGA-1 4", "norad": "25642", "lat": "-14.336", "lon": "90.6099", "alt_km": "35788.3", "launch_date": "1999-02-28", "launch_site": "TYMSC", "epoch_raw": "26205.61759572", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 14:49:20 UTC", "epoch_iso": "2026-07-24T14:49:20.270208Z"}, {"name": "EKRAN 3", "norad": "11273", "lat": "1.267", "lon": "90.9804", "alt_km": "35603.8", "launch_date": "1979-02-21", "launch_site": "TYMSC", "epoch_raw": "26205.15788926", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 03:47:21 UTC", "epoch_iso": "2026-07-24T03:47:21.632064Z"}, {"name": "RADUGA-1 3", "norad": "22981", "lat": "-11.1487", "lon": "91.6392", "alt_km": "35775.1", "launch_date": "1994-02-05", "launch_site": "TYMSC", "epoch_raw": "26205.61786450", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 14:49:43 UTC", "epoch_iso": "2026-07-24T14:49:43.492800Z"}, {"name": "LUCH-5V", "norad": "39727", "lat": "-4.049", "lon": "94.6396", "alt_km": "35796.1", "launch_date": "2014-04-28", "launch_site": "TYMSC", "epoch_raw": "26205.62900792", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 15:05:46 UTC", "epoch_iso": "2026-07-24T15:05:46.284288Z"}, {"name": "EKRAN 4", "norad": "11561", "lat": "1.4527", "lon": "94.8469", "alt_km": "35840.6", "launch_date": "1979-10-03", "launch_site": "TYMSC", "epoch_raw": "26205.60811653", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 14:35:41 UTC", "epoch_iso": "2026-07-24T14:35:41.268192Z"}, {"name": "RADUGA 23", "norad": "19928", "lat": "-6.2415", "lon": "95.1268", "alt_km": "35850.9", "launch_date": "1989-04-14", "launch_site": "TYMSC", "epoch_raw": "26205.83031006", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 19:55:38 UTC", "epoch_iso": "2026-07-24T19:55:38.789184Z"}, {"name": "EXPRESS 103", "norad": "45985", "lat": "-0.0045", "lon": "96.4921", "alt_km": "35787.0", "launch_date": "2020-07-30", "launch_site": "TYMSC", "epoch_raw": "26205.62935458", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 15:06:16 UTC", "epoch_iso": "2026-07-24T15:06:16.235712Z"}, {"name": "GORIZONT 9", "norad": "14940", "lat": "-1.5485", "lon": "97.0302", "alt_km": "35774.0", "launch_date": "1984-04-22", "launch_site": "TYMSC", "epoch_raw": "26205.60838685", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 14:36:04 UTC", "epoch_iso": "2026-07-24T14:36:04.623840Z"}, {"name": "GORIZONT 21", "norad": "20923", "lat": "-7.1012", "lon": "98.013", "alt_km": "35804.1", "launch_date": "1990-11-03", "launch_site": "TYMSC", "epoch_raw": "26205.82475256", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 19:47:38 UTC", "epoch_iso": "2026-07-24T19:47:38.621184Z"}, {"name": "EKRAN 11", "norad": "14377", "lat": "0.099", "lon": "100.1489", "alt_km": "35783.8", "launch_date": "1983-09-29", "launch_site": "TYMSC", "epoch_raw": "26204.72966840", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 17:30:43 UTC", "epoch_iso": "2026-07-23T17:30:43.349760Z"}, {"name": "EXPRESS 2", "norad": "24435", "lat": "-10.7405", "lon": "102.2389", "alt_km": "35754.1", "launch_date": "1996-09-26", "launch_site": "TYMSC", "epoch_raw": "26205.81518380", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 19:33:51 UTC", "epoch_iso": "2026-07-24T19:33:51.880320Z"}, {"name": "EXPRESS AMU-3", "norad": "50002", "lat": "-0.024", "lon": "102.8914", "alt_km": "35786.5", "launch_date": "2021-12-13", "launch_site": "TYMSC", "epoch_raw": "26205.87366046", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 20:58:04 UTC", "epoch_iso": "2026-07-24T20:58:04.263744Z"}, {"name": "RADUGA 24", "norad": "20367", "lat": "-5.1419", "lon": "104.5584", "alt_km": "35781.9", "launch_date": "1989-12-15", "launch_site": "TYMSC", "epoch_raw": "26205.62358578", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 14:57:57 UTC", "epoch_iso": "2026-07-24T14:57:57.811392Z"}, {"name": "GORIZONT 12", "norad": "16769", "lat": "-1.2005", "lon": "109.1588", "alt_km": "35769.6", "launch_date": "1986-06-10", "launch_site": "TYMSC", "epoch_raw": "26205.24280844", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 05:49:38 UTC", "epoch_iso": "2026-07-24T05:49:38.649216Z"}, {"name": "RADUGA 27", "norad": "21132", "lat": "-3.3586", "lon": "117.2317", "alt_km": "35768.7", "launch_date": "1991-02-28", "launch_site": "TYMSC", "epoch_raw": "26204.77795130", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 18:40:14 UTC", "epoch_iso": "2026-07-23T18:40:14.992320Z"}, {"name": "RADUGA 29", "norad": "22557", "lat": "-3.5918", "lon": "125.0661", "alt_km": "35787.8", "launch_date": "1993-03-25", "launch_site": "TYMSC", "epoch_raw": "26205.27849134", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 06:41:01 UTC", "epoch_iso": "2026-07-24T06:41:01.651776Z"}, {"name": "GORIZONT 22", "norad": "20953", "lat": "1.3288", "lon": "137.8826", "alt_km": "35774.6", "launch_date": "1990-11-23", "launch_site": "TYMSC", "epoch_raw": "26204.71101439", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 17:03:51 UTC", "epoch_iso": "2026-07-23T17:03:51.643296Z"}, {"name": "GORIZONT 32", "norad": "23880", "lat": "-2.5464", "lon": "139.7086", "alt_km": "35770.9", "launch_date": "1996-05-25", "launch_site": "TYMSC", "epoch_raw": "26205.28152469", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 06:45:23 UTC", "epoch_iso": "2026-07-24T06:45:23.733216Z"}, {"name": "EXPRESS-AM5", "norad": "39487", "lat": "-0.0054", "lon": "140.0222", "alt_km": "35787.5", "launch_date": "2013-12-26", "launch_site": "TYMSC", "epoch_raw": "26204.99645689", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 23:54:53 UTC", "epoch_iso": "2026-07-23T23:54:53.875296Z"}, {"name": "EXPRESS AMU-7", "norad": "50001", "lat": "-0.0056", "lon": "145.0016", "alt_km": "35785.2", "launch_date": "2021-12-13", "launch_site": "TYMSC", "epoch_raw": "26205.63901243", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 15:20:10 UTC", "epoch_iso": "2026-07-24T15:20:10.673952Z"}, {"name": "EKRAN 2 DEB", "norad": "29014", "lat": "4.0191", "lon": "155.4083", "alt_km": "35829.9", "launch_date": "1977-09-20", "launch_site": "TYMSC", "epoch_raw": "26205.56990095", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 13:40:39 UTC", "epoch_iso": "2026-07-24T13:40:39.442080Z"}, {"name": "YAMAL 202", "norad": "28089", "lat": "-5.7022", "lon": "163.6401", "alt_km": "35792.7", "launch_date": "2003-11-24", "launch_site": "TYMSC", "epoch_raw": "26205.46017050", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 11:02:38 UTC", "epoch_iso": "2026-07-24T11:02:38.731200Z"}, {"name": "ELEKTRO-L 4", "norad": "55506", "lat": "0.0782", "lon": "165.7553", "alt_km": "35793.1", "launch_date": "2023-02-05", "launch_site": "TYMSC", "epoch_raw": "26204.70221324", "epoch_day": "2026年204日目", "epoch_utc": "2026/07/23 16:51:11 UTC", "epoch_iso": "2026-07-23T16:51:11.223936Z"}, {"name": "LUCH-5A", "norad": "37951", "lat": "-7.7704", "lon": "167.3398", "alt_km": "35793.6", "launch_date": "2011-12-11", "launch_site": "TYMSC", "epoch_raw": "26205.57412616", "epoch_day": "2026年205日目", "epoch_utc": "2026/07/24 13:46:44 UTC", "epoch_iso": "2026-07-24T13:46:44.500224Z"}];
+
+
+const map =
+    L.map("map").setView(
+        [0, 60],
+        2
+    );
+
+
+L.tileLayer(
+    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    {
+        maxZoom: 6,
+        attribution: "OpenStreetMap"
+    }
+).addTo(map);
+
+
+
+/* =========================================================
+   発射場コード → 日本語
+   ========================================================= */
+
+const LAUNCH_SITES = {
+
+    /* ロシア */
+    "DLS":
+        "ドンバロフスキー発射場",
+
+    "KYMSC":
+        "カプースチン・ヤール",
+
+    "PLMSC":
+        "プレセツク宇宙基地",
+
+    "SVOBO":
+        "スヴォボードヌイ宇宙基地",
+
+    "VOSTO":
+        "ボストーチヌイ宇宙基地",
+
+
+    /* カザフスタン */
+    "TYMSC":
+        "バイコヌール宇宙基地",
+
+
+    /* その他、ロシア衛星でも使用例あり */
+    "FRGUI":
+        "ギアナ宇宙センター",
+
+    "SEAL":
+        "シーローンチ海上発射施設",
+
+    "SUBL":
+        "潜水艦発射",
+
+    "UNK":
+        "不明"
+};
+
+
+
+function launchSiteName(code) {
+
+    if (!code) {
+        return "不明";
+    }
+
+    const key =
+        String(code)
+            .trim()
+            .toUpperCase();
+
+    const name =
+        LAUNCH_SITES[key];
+
+    if (name) {
+
+        return (
+            name +
+            "（" +
+            key +
+            "）"
+        );
+    }
+
+    /*
+     * 未登録コードでも
+     * 元の略号は残す
+     */
+    return key;
+}
+
+
+
+/* =========================================================
+   衛星カテゴリ
+   ========================================================= */
 
 function catOf(r) {
 
-    const n = String(r.name || "").toUpperCase();
+    const n =
+        String(
+            r.name || ""
+        ).toUpperCase();
 
-    if (n.includes("LUCH"))
+    const lat =
+        Math.abs(
+            parseFloat(
+                r.lat || "0"
+            )
+        );
+
+
+    /* GEOから南北に大きく外れている */
+    if (lat > 3) {
+
+        return [
+            "#dd6b20",
+            "移動中・傾斜大",
+            "GEO付近だが南北方向の変動が大きい衛星"
+        ];
+    }
+
+
+    if (n.includes("LUCH")) {
+
         return [
             "#2b6cb0",
             "データ中継",
-            "ISS・低軌道衛星・宇宙機との通信中継系"
+            "LUCH系データ中継衛星"
         ];
+    }
+
 
     if (
         n.includes("EXPRESS") ||
         n.includes("EKSPRESS") ||
         n.includes("YAMAL")
-    )
-        return [
-            "#3182ce",
-            "通信",
-            "ロシア系の静止通信衛星"
-        ];
+    ) {
 
-    if (n.includes("ELEKTRO"))
+        return [
+            "#c53030",
+            "通信",
+            "ロシア系通信衛星"
+        ];
+    }
+
+
+    if (n.includes("ELEKTRO")) {
+
         return [
             "#2f855a",
             "気象・観測",
-            "静止気象・地球観測系"
+            "気象・地球観測系衛星"
         ];
+    }
+
 
     if (
         n.includes("RADUGA") ||
-        n.includes("GARPUN")
-    )
+        n.includes("GARPUN") ||
+        n.includes("BLAGOVEST") ||
+        n.includes("OLYMP")
+    ) {
+
         return [
-            "#c53030",
-            "軍事通信",
-            "軍事通信・政府通信系の可能性"
+            "#6b46c1",
+            "軍事・政府系通信",
+            "軍事・政府系通信衛星"
         ];
+    }
+
+
+    if (
+        n.includes("GORIZONT") ||
+        n.includes("EKRAN")
+    ) {
+
+        return [
+            "#718096",
+            "旧世代通信",
+            "旧ソ連・ロシアの旧世代通信衛星"
+        ];
+    }
+
 
     return [
-        "#718096",
+        "#4a5568",
         "未整理",
-        "用途未整理。公開情報または自分メモで追記"
+        "用途未整理"
     ];
 }
 
 
-function ageOf(epochIso) {
 
-    const epoch = new Date(epochIso);
+/* =========================================================
+   打上げ日
+   ========================================================= */
 
-    if (Number.isNaN(epoch.getTime())) {
+function formatLaunchDate(date) {
+
+    if (!date) {
         return "不明";
     }
 
-    let diff = Date.now() - epoch.getTime();
-    const future = diff < 0;
+    return date.replaceAll(
+        "-",
+        "/"
+    );
+}
 
-    diff = Math.abs(diff);
 
-    const totalMinutes =
-        Math.floor(diff / 60000);
+
+function launchAgeOf(date) {
+
+    if (!date) {
+        return "不明";
+    }
+
+    const launch =
+        new Date(
+            date +
+            "T00:00:00Z"
+        );
+
+
+    if (
+        Number.isNaN(
+            launch.getTime()
+        )
+    ) {
+        return "不明";
+    }
+
+
+    const diff =
+        Date.now() -
+        launch.getTime();
+
+
+    if (diff < 0) {
+        return "未打上げ";
+    }
+
 
     const days =
-        Math.floor(totalMinutes / 1440);
+        Math.floor(
+            diff / 86400000
+        );
+
+
+    if (days < 365) {
+
+        return (
+            days +
+            "日"
+        );
+    }
+
+
+    const years =
+        Math.floor(
+            days / 365.2425
+        );
+
+
+    const remainDays =
+        Math.floor(
+            days -
+            years * 365.2425
+        );
+
+
+    return (
+        years +
+        "年 " +
+        remainDays +
+        "日"
+    );
+}
+
+
+
+/* =========================================================
+   TLE経過時間
+   ========================================================= */
+
+function ageOf(epochIso) {
+
+    const epoch =
+        new Date(
+            epochIso
+        );
+
+
+    if (
+        Number.isNaN(
+            epoch.getTime()
+        )
+    ) {
+        return "不明";
+    }
+
+
+    let diff =
+        Date.now() -
+        epoch.getTime();
+
+
+    const future =
+        diff < 0;
+
+
+    diff =
+        Math.abs(diff);
+
+
+    const totalMinutes =
+        Math.floor(
+            diff / 60000
+        );
+
+
+    const days =
+        Math.floor(
+            totalMinutes / 1440
+        );
+
 
     const hours =
-        Math.floor((totalMinutes % 1440) / 60);
+        Math.floor(
+            (totalMinutes % 1440) / 60
+        );
+
 
     const minutes =
         totalMinutes % 60;
 
+
     let text = "";
 
+
     if (days > 0) {
-        text += days + "日 ";
+
+        text +=
+            days +
+            "日 ";
     }
 
-    text += hours + "時間" + minutes + "分";
 
-    return future ? "未来 " + text : text;
+    text +=
+        hours +
+        "時間" +
+        minutes +
+        "分";
+
+
+    return future
+        ? "未来 " + text
+        : text;
 }
 
 
+
+/* =========================================================
+   TLE鮮度
+   ========================================================= */
+
 function freshnessOf(epochIso) {
 
-    const epoch = new Date(epochIso);
+    const epoch =
+        new Date(
+            epochIso
+        );
 
-    if (Number.isNaN(epoch.getTime())) {
+
+    if (
+        Number.isNaN(
+            epoch.getTime()
+        )
+    ) {
+
         return {
             color: "#718096",
             icon: "⚪",
@@ -106,10 +507,16 @@ function freshnessOf(epochIso) {
         };
     }
 
+
     const ageHours =
-        (Date.now() - epoch.getTime()) / 3600000;
+        (
+            Date.now() -
+            epoch.getTime()
+        ) / 3600000;
+
 
     if (ageHours < 24) {
+
         return {
             color: "#16a34a",
             icon: "🟢",
@@ -117,7 +524,9 @@ function freshnessOf(epochIso) {
         };
     }
 
+
     if (ageHours < 72) {
+
         return {
             color: "#ca8a04",
             icon: "🟡",
@@ -125,13 +534,16 @@ function freshnessOf(epochIso) {
         };
     }
 
+
     if (ageHours < 168) {
+
         return {
             color: "#ea580c",
             icon: "🟠",
             text: "古い"
         };
     }
+
 
     return {
         color: "#dc2626",
@@ -141,64 +553,141 @@ function freshnessOf(epochIso) {
 }
 
 
+
+/* =========================================================
+   ポップアップ
+   ========================================================= */
+
 function popOf(r) {
 
-    const c = catOf(r);
-    const fresh = freshnessOf(r.epoch_iso);
+    const c =
+        catOf(r);
+
+    const fresh =
+        freshnessOf(
+            r.epoch_iso
+        );
+
 
     return (
-        "<b>" + r.name + "</b><br>" +
+
+        "<b>" +
+        r.name +
+        "</b><br>" +
+
 
         "<span style='" +
         "display:inline-block;" +
         "margin:4px 0;" +
         "padding:2px 8px;" +
         "border-radius:10px;" +
-        "background:" + c[0] + ";" +
+        "background:" +
+        c[0] +
+        ";" +
         "color:white;" +
         "font-size:12px;" +
         "'>" +
+
         c[1] +
+
         "</span><br>" +
+
 
         "<b>NORAD ID：</b>" +
-        r.norad + "<br>" +
+        r.norad +
+        "<br>" +
+
 
         "<b>緯度：</b>" +
-        r.lat + "°<br>" +
+        r.lat +
+        "°<br>" +
+
 
         "<b>経度：</b>" +
-        r.lon + "°<br>" +
+        r.lon +
+        "°<br>" +
+
 
         "<b>高度：</b>" +
-        r.alt_km + " km<br>" +
+        r.alt_km +
+        " km<br>" +
+
 
         "<hr>" +
+
+
+        "🚀 <b>打上げ日：</b>" +
+
+        formatLaunchDate(
+            r.launch_date
+        ) +
+
+        "<br>" +
+
+
+        "📍 <b>打上げ場所：</b>" +
+
+        launchSiteName(
+            r.launch_site
+        ) +
+
+        "<br>" +
+
+
+        "🛰 <b>打上げから：</b>" +
+
+        launchAgeOf(
+            r.launch_date
+        ) +
+
+        "<br>" +
+
+
+        "<hr>" +
+
 
         "<b>TLEエポック：</b>" +
-        r.epoch_day + "<br>" +
+        r.epoch_day +
+        "<br>" +
+
 
         "<b>エポック日時：</b>" +
-        r.epoch_utc + "<br>" +
+        r.epoch_utc +
+        "<br>" +
+
 
         "<b>経過時間：</b>" +
-        ageOf(r.epoch_iso) + "<br>" +
+
+        ageOf(
+            r.epoch_iso
+        ) +
+
+        "<br>" +
+
 
         "<b>TLE鮮度：</b>" +
+
         "<span style='" +
         "font-weight:bold;" +
-        "color:" + fresh.color + ";" +
+        "color:" +
+        fresh.color +
+        ";" +
         "'>" +
-        fresh.icon + " " +
+
+        fresh.icon +
+        " " +
         fresh.text +
+
         "</span><br>" +
+
 
         "<hr>" +
 
-        "<b>国：</b>ロシア<br>" +
 
         "<b>分類：</b>" +
-        c[1] + "<br>" +
+        c[1] +
+        "<br>" +
+
 
         "<b>任務メモ：</b>" +
         c[2]
@@ -206,61 +695,393 @@ function popOf(r) {
 }
 
 
+
+/* =========================================================
+   マーカー生成
+   ========================================================= */
+
+const satelliteMarkers = [];
+
+
 data.forEach(r => {
 
-    const c = catOf(r);
+    const c =
+        catOf(r);
 
-    L.circleMarker(
-        [
-            parseFloat(r.lat),
-            parseFloat(r.lon)
-        ],
-        {
-            radius: 8,
-            color: "#1a202c",
-            weight: 1,
-            fillColor: c[0],
-            fillOpacity: 0.9
-        }
-    )
-    .addTo(map)
-    .bindPopup(popOf(r));
+
+    const marker =
+        L.circleMarker(
+
+            [
+                parseFloat(
+                    r.lat
+                ),
+
+                parseFloat(
+                    r.lon
+                )
+            ],
+
+            {
+                radius: 8,
+                color: "#1a202c",
+                weight: 1,
+                fillColor: c[0],
+                fillOpacity: 0.9
+            }
+        )
+
+        .addTo(map)
+
+        .bindPopup(
+            popOf(r),
+            {
+                maxWidth: 420
+            }
+        );
+
+
+    satelliteMarkers.push({
+
+        data: r,
+        marker: marker
+    });
 });
 
 
+
+/* =========================================================
+   検索文字列の正規化
+
+   EXPRESS-AMU1
+   express amu1
+   ExpressAmu1
+
+   全部同じ扱い
+   ========================================================= */
+
+function normalizeSearch(value) {
+
+    return String(
+        value || ""
+    )
+
+    .toUpperCase()
+
+    .replace(
+        /[^A-Z0-9]/g,
+        ""
+    );
+}
+
+
+
+/* =========================================================
+   検索
+   ========================================================= */
+
+function searchSatellite() {
+
+    const input =
+        document.getElementById(
+            "satSearch"
+        );
+
+
+    const result =
+        document.getElementById(
+            "searchResult"
+        );
+
+
+    const query =
+        normalizeSearch(
+            input.value.trim()
+        );
+
+
+    if (!query) {
+
+        result.textContent =
+            "衛星名かNORAD IDを入力してください";
+
+        return;
+    }
+
+
+    /*
+     * 完全一致
+     */
+    let found =
+        satelliteMarkers.find(
+            item => {
+
+                const name =
+                    normalizeSearch(
+                        item.data.name
+                    );
+
+                const norad =
+                    normalizeSearch(
+                        item.data.norad
+                    );
+
+                return (
+                    name === query ||
+                    norad === query
+                );
+            }
+        );
+
+
+    /*
+     * 部分一致
+     */
+    if (!found) {
+
+        found =
+            satelliteMarkers.find(
+                item => {
+
+                    const name =
+                        normalizeSearch(
+                            item.data.name
+                        );
+
+                    const norad =
+                        normalizeSearch(
+                            item.data.norad
+                        );
+
+                    return (
+                        name.includes(query) ||
+                        norad.includes(query)
+                    );
+                }
+            );
+    }
+
+
+    if (!found) {
+
+        result.textContent =
+            "❌ 該当する衛星がありません";
+
+        return;
+    }
+
+
+    const r =
+        found.data;
+
+    const marker =
+        found.marker;
+
+
+    map.setView(
+
+        [
+            parseFloat(
+                r.lat
+            ),
+
+            parseFloat(
+                r.lon
+            )
+        ],
+
+        5,
+
+        {
+            animate: true
+        }
+    );
+
+
+    marker.openPopup();
+
+
+    /*
+     * 検索したマーカーを
+     * 一時的に大きくする
+     */
+    marker.setRadius(
+        14
+    );
+
+
+    setTimeout(
+
+        function() {
+
+            marker.setRadius(
+                8
+            );
+        },
+
+        2500
+    );
+
+
+    result.textContent =
+        "✅ " +
+        r.name +
+        " / NORAD " +
+        r.norad;
+}
+
+
+
+/* 検索ボタン */
+
+document
+    .getElementById(
+        "searchButton"
+    )
+    .addEventListener(
+        "click",
+        searchSatellite
+    );
+
+
+
+/* Enterでも検索 */
+
+document
+    .getElementById(
+        "satSearch"
+    )
+    .addEventListener(
+
+        "keydown",
+
+        function(event) {
+
+            if (
+                event.key ===
+                "Enter"
+            ) {
+
+                event.preventDefault();
+
+                searchSatellite();
+            }
+        }
+    );
+
+
+
+/* =========================================================
+   衛星カテゴリ
+   ========================================================= */
+
 const legend =
     L.control({
-        position: "bottomleft"
+        position:
+            "bottomleft"
     });
 
 
-legend.onAdd = function() {
+legend.onAdd =
+    function() {
 
-    const div =
-        L.DomUtil.create(
-            "div",
-            "info legend"
-        );
+        const div =
+            L.DomUtil.create(
+                "div",
+                "info legend"
+            );
 
-    div.style.background = "white";
-    div.style.padding = "10px";
-    div.style.borderRadius = "8px";
-    div.style.boxShadow =
-        "0 1px 5px rgba(0,0,0,0.3)";
-    div.style.fontSize = "13px";
 
-    div.innerHTML =
-        "<b>衛星カテゴリ</b><br>" +
-        "<div>🔵 データ中継</div>" +
-        "<div>🔷 通信</div>" +
-        "<div>🔴 軍事通信</div>" +
-        "<div>🟢 気象・観測</div>" +
-        "<div>⚫ 未整理</div>";
+        div.id =
+            "satLegend";
 
-    return div;
-};
+
+        div.style.background =
+            "white";
+
+        div.style.padding =
+            "10px";
+
+        div.style.borderRadius =
+            "8px";
+
+        div.style.boxShadow =
+            "0 1px 5px rgba(0,0,0,0.3)";
+
+        div.style.fontSize =
+            "13px";
+
+
+        div.innerHTML =
+
+            "<b>衛星カテゴリ</b><br>" +
+
+            "<div>🔵 データ中継</div>" +
+
+            "<div>🔴 通信</div>" +
+
+            "<div>🟢 気象・観測</div>" +
+
+            "<div>🟣 軍事・政府系通信</div>" +
+
+            "<div>⚫ 旧世代・未整理</div>" +
+
+            "<div>🟠 移動中・傾斜大</div>";
+
+
+        return div;
+    };
 
 
 legend.addTo(map);
+
+
+
+/* =========================================================
+   詳細表示中はカテゴリを消す
+   ========================================================= */
+
+map.on(
+    "popupopen",
+
+    function() {
+
+        const legendBox =
+            document.getElementById(
+                "satLegend"
+            );
+
+
+        if (legendBox) {
+
+            legendBox.style.display =
+                "none";
+        }
+    }
+);
+
+
+
+/* 詳細を閉じたらカテゴリ復活 */
+
+map.on(
+    "popupclose",
+
+    function() {
+
+        const legendBox =
+            document.getElementById(
+                "satLegend"
+            );
+
+
+        if (legendBox) {
+
+            legendBox.style.display =
+                "block";
+        }
+    }
+);
+
 
 </script></body></html>
